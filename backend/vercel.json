@@ -1,12 +1,24 @@
 {
 	"version": 2,
+	"builds": [
+		{
+			"src": "server.js",
+			"use": "@vercel/node"
+		}
+	],
+	"routes": [
+		{
+			"src": "/(.*)",
+			"dest": "/server.js"
+		}
+	],
 	"headers": [
 		{
-			"source": "/api/(.*)",
+			"source": "/(.*)",
 			"headers": [
 				{
 					"key": "Access-Control-Allow-Origin",
-					"value": "https://https://code-vector-internship-task-qchw.vercel.app"
+					"value": "https://code-vector-internship-task-qchw.vercel.app"
 				},
 				{
 					"key": "Access-Control-Allow-Methods",
