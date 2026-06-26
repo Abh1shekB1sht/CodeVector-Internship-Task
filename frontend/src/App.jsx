@@ -1,10 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ??
-  "https://code-vector-internship-task-zeta.vercel.app";
-
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
 const CATEGORIES = [
   "Electronics",
   "Books",
@@ -29,7 +26,6 @@ function App() {
   const [panelMode, setPanelMode] = useState(null);
   const [mutationLoading, setMutationLoading] = useState(false);
   const [mutationMessage, setMutationMessage] = useState("");
-  const formPanelRef = useRef(null);
   const [formData, setFormData] = useState({
     unique_id: "",
     name: "",
@@ -43,26 +39,26 @@ function App() {
       currency: "INR",
       maximumFractionDigits: 0,
     });
+    return products
+      .filter((product) =>
+        selectedCategory && selectedCategory !== "All"
+          ? product.category === selectedCategory
+          : true,
+      )
+      .map((product) => ({
+        ...product,
+        formattedPrice: currency.format(Number(product.price) || 0),
+        formattedDate: product.created_at
+          ? new Date(product.created_at).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
+          : "Unknown date",
+      }));
+  }, [products, selectedCategory]);
 
-    return products.map((product) => ({
-      ...product,
-      formattedPrice: currency.format(product.price),
-      formattedCreatedAt: product.created_at
-        ? new Date(product.created_at).toLocaleString("en-IN", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "Unknown date",
-    }));
-  }, [products]);
-
-  const fetchProducts = async ({
-    cursor = null,
-    category = selectedCategory,
-  } = {}) => {
+  const fetchProducts = async (cursor = null, category = selectedCategory) => {
     const params = new URLSearchParams({ limit: "12" });
 
     if (cursor) {
@@ -84,11 +80,11 @@ function App() {
     return response.json();
   };
 
-  const loadProducts = async ({
+  const loadProducts = async (
     cursor = null,
     append = false,
     category = selectedCategory,
-  } = {}) => {
+  ) => {
     if (append) {
       setLoadingMore(true);
     } else {
@@ -97,7 +93,7 @@ function App() {
     }
 
     try {
-      const data = await fetchProducts({ cursor, category });
+      const data = await fetchProducts(cursor, category);
 
       setProducts((currentProducts) =>
         append
@@ -123,58 +119,10 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    let ignore = false;
-
-    const loadInitialProducts = async () => {
-      try {
-        setError("");
-        const data = await fetchProducts({ category: selectedCategory });
-
-        if (ignore) {
-          return;
-        }
-
-        setProducts(data.products ?? []);
-        setNextCursor(data.nextCursor ?? null);
-        setLastUpdated(
-          new Date().toLocaleTimeString("en-IN", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        );
-      } catch (fetchError) {
-        if (!ignore) {
-          setError(
-            fetchError instanceof Error
-              ? fetchError.message
-              : "Unable to load products",
-          );
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadInitialProducts();
-
-    return () => {
-      ignore = true;
-    };
-  }, [selectedCategory]);
-
-  useEffect(() => {
-    if (!panelMode) {
-      return;
-    }
-
-    formPanelRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, [panelMode]);
+  const refreshProducts = async () => {
+    setNextCursor(null);
+    await loadProducts(null, false, selectedCategory);
+  };
 
   const openAddPanel = () => {
     setPanelMode("add");
@@ -226,9 +174,10 @@ function App() {
     };
 
     try {
+      const endpoint = panelMode === "add" ? "/api/product" : "/api/product";
       const method = panelMode === "add" ? "POST" : "PATCH";
 
-      const response = await fetch(`${API_BASE_URL}/api/product`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -243,7 +192,7 @@ function App() {
       }
 
       setMutationMessage(data.message ?? "Product saved successfully");
-      await loadProducts({ category: selectedCategory });
+      await loadProducts(null, false, selectedCategory);
       setPanelMode(null);
     } catch (submitError) {
       setMutationMessage(
@@ -256,9 +205,46 @@ function App() {
     }
   };
 
-  const refreshProducts = async () => {
-    await loadProducts({ category: selectedCategory });
-  };
+  useEffect(() => {
+    let ignore = false;
+
+    const loadInitialProducts = async () => {
+      try {
+        const data = await fetchProducts(null, selectedCategory);
+
+        if (ignore) {
+          return;
+        }
+
+        setProducts(data.products ?? []);
+        setNextCursor(data.nextCursor ?? null);
+        setLastUpdated(
+          new Date().toLocaleTimeString("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        );
+      } catch (fetchError) {
+        if (!ignore) {
+          setError(
+            fetchError instanceof Error
+              ? fetchError.message
+              : "Unable to load products",
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadInitialProducts();
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedCategory]);
 
   return (
     <main className="page-shell">
@@ -313,7 +299,6 @@ function App() {
             Filter the product list by one category or show everything.
           </p>
         </div>
-
         <select
           className="category-select"
           value={selectedCategory}
@@ -329,11 +314,7 @@ function App() {
       </section>
 
       {panelMode ? (
-        <section
-          className="form-panel"
-          aria-label="Product form"
-          ref={formPanelRef}
-        >
+        <section className="form-panel" aria-label="Product form">
           <div className="form-panel-header">
             <div>
               <p className="filter-label">
@@ -359,7 +340,7 @@ function App() {
                 onChange={handleFormChange}
                 placeholder="PROD-001"
                 required
-                disabled={mutationLoading}
+                disabled={mutationLoading || panelMode === "update"}
               />
             </label>
             <label>
@@ -418,7 +399,6 @@ function App() {
               </button>
             </div>
           </form>
-
           {mutationMessage ? (
             <div className="status-card form-status">{mutationMessage}</div>
           ) : null}
@@ -448,7 +428,7 @@ function App() {
                   <h2>{product.name}</h2>
                   <p className="price">{product.formattedPrice}</p>
                   <p className="product-date">
-                    Created {product.formattedCreatedAt}
+                    Created {product.formattedDate}
                   </p>
                   <button
                     type="button"
@@ -465,9 +445,7 @@ function App() {
               <button
                 type="button"
                 className="load-more-button"
-                onClick={() =>
-                  loadProducts({ cursor: nextCursor, append: true })
-                }
+                onClick={() => loadProducts(nextCursor, true)}
                 disabled={!nextCursor || loadingMore}
               >
                 {loadingMore
