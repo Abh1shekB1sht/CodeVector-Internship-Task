@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
 const API_BASE_URL = "https://code-vector-internship-task-smoky.vercel.app";
@@ -26,6 +26,8 @@ function App() {
   const [panelMode, setPanelMode] = useState(null);
   const [mutationLoading, setMutationLoading] = useState(false);
   const [mutationMessage, setMutationMessage] = useState("");
+  const [editingUniqueId, setEditingUniqueId] = useState("");
+  const updatePanelRef = useRef(null);
   const [formData, setFormData] = useState({
     unique_id: "",
     name: "",
@@ -58,27 +60,30 @@ function App() {
       }));
   }, [products, selectedCategory]);
 
-  const fetchProducts = async (cursor = null, category = selectedCategory) => {
-    const params = new URLSearchParams({ limit: "12" });
+  const fetchProducts = useCallback(
+    async (cursor = null, category = selectedCategory) => {
+      const params = new URLSearchParams({ limit: "12" });
 
-    if (cursor) {
-      params.set("cursor", cursor);
-    }
+      if (cursor) {
+        params.set("cursor", cursor);
+      }
 
-    if (category && category !== "All") {
-      params.set("category", category);
-    }
+      if (category && category !== "All") {
+        params.set("category", category);
+      }
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/product?${params.toString()}`,
-    );
+      const response = await fetch(
+        `${API_BASE_URL}/api/product?${params.toString()}`,
+      );
 
-    if (!response.ok) {
-      throw new Error(`Failed to load products (${response.status})`);
-    }
+      if (!response.ok) {
+        throw new Error(`Failed to load products (${response.status})`);
+      }
 
-    return response.json();
-  };
+      return response.json();
+    },
+    [selectedCategory],
+  );
 
   const loadProducts = async (
     cursor = null,
@@ -127,6 +132,7 @@ function App() {
   const openAddPanel = () => {
     setPanelMode("add");
     setMutationMessage("");
+    setEditingUniqueId("");
     setFormData({
       unique_id: "",
       name: "",
@@ -138,6 +144,7 @@ function App() {
   const openUpdatePanel = (product = null) => {
     setPanelMode("update");
     setMutationMessage("");
+    setEditingUniqueId(product?.unique_id ?? "");
     setFormData({
       unique_id: product?.unique_id ?? "",
       name: product?.name ?? "",
@@ -149,6 +156,7 @@ function App() {
   const closePanel = () => {
     setPanelMode(null);
     setMutationMessage("");
+    setEditingUniqueId("");
   };
 
   const handleFormChange = (event) => {
@@ -173,6 +181,10 @@ function App() {
       category: formData.category,
     };
 
+    if (panelMode === "update") {
+      payload.original_unique_id = editingUniqueId;
+    }
+
     try {
       const endpoint = panelMode === "add" ? "/api/product" : "/api/product";
       const method = panelMode === "add" ? "POST" : "PATCH";
@@ -194,6 +206,7 @@ function App() {
       setMutationMessage(data.message ?? "Product saved successfully");
       await loadProducts(null, false, selectedCategory);
       setPanelMode(null);
+      setEditingUniqueId("");
     } catch (submitError) {
       setMutationMessage(
         submitError instanceof Error
@@ -210,7 +223,7 @@ function App() {
 
     const loadInitialProducts = async () => {
       try {
-        const data = await fetchProducts(null, selectedCategory);
+        const data = await fetchProducts();
 
         if (ignore) {
           return;
@@ -244,7 +257,18 @@ function App() {
     return () => {
       ignore = true;
     };
-  }, [selectedCategory]);
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    if (panelMode !== "update" || !updatePanelRef.current) {
+      return;
+    }
+
+    updatePanelRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [panelMode]);
 
   return (
     <main className="page-shell">
@@ -314,7 +338,11 @@ function App() {
       </section>
 
       {panelMode ? (
-        <section className="form-panel" aria-label="Product form">
+        <section
+          className="form-panel"
+          aria-label="Product form"
+          ref={updatePanelRef}
+        >
           <div className="form-panel-header">
             <div>
               <p className="filter-label">
@@ -340,7 +368,7 @@ function App() {
                 onChange={handleFormChange}
                 placeholder="PROD-001"
                 required
-                disabled={mutationLoading || panelMode === "update"}
+                disabled={mutationLoading}
               />
             </label>
             <label>
