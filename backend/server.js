@@ -20,6 +20,8 @@ app.get("/", (req, res) => {
 
 app.use("/api/product", productRoute);
 
+const handler = (req, res) => app(req, res);
+
 if (require.main === module) {
   const port = process.env.PORT || 5000;
 
@@ -28,4 +30,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = app;
+// Export a serverless-compatible handler for Vercel and keep the Express
+// `app` available as a property for local testing/imports.
+module.exports = handler;
+module.exports.app = app;
