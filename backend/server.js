@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: "https://code-vector-internship-task-31kv.vercel.app",
+    origin: /https:\/\/code-vector-internship-task.*\.vercel\.app$/,
   }),
 );
 
