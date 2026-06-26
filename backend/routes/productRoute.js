@@ -157,12 +157,10 @@ router.post("/add-50", async (req, res) => {
       ordered: false,
     });
 
-    res
-      .status(201)
-      .json({
-        message: "50 products added successfully",
-        products: saveProduct,
-      });
+    res.status(201).json({
+      message: "50 products added successfully",
+      products: saveProduct,
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Server Error" });
@@ -186,12 +184,10 @@ router.patch("/", async (req, res) => {
     if (category) updateFields.category = category;
 
     if (Object.keys(updateFields).length === 0) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "At least one field (name, price, category) is required to update",
-        });
+      return res.status(400).json({
+        message:
+          "At least one field (name, price, category) is required to update",
+      });
     }
 
     const updatedProduct = await Product.findOneAndUpdate(
@@ -204,12 +200,10 @@ router.patch("/", async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Product updated successfully",
-        product: updatedProduct,
-      });
+    res.status(200).json({
+      message: "Product updated successfully",
+      product: updatedProduct,
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Server Error" });
