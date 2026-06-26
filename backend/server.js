@@ -9,7 +9,11 @@ const productRoute = require("./routes/productRoute.js");
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://code-vector-internship-task-qchw.vercel.app",
+  }),
+);
 
 connectDB().catch((error) => {
   console.error("Database connection failed:", error);
