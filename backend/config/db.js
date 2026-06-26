@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
 let isConnected = false;
+let connectionPromise = null;
 
 const connectDB = async () => {
   try {
@@ -13,11 +14,19 @@ const connectDB = async () => {
       return;
     }
 
-    const conn = await mongoose.connect(process.env.MONGO_URI);
+    if (connectionPromise) {
+      await connectionPromise;
+      return;
+    }
+
+    connectionPromise = mongoose.connect(process.env.MONGO_URI);
+    const conn = await connectionPromise;
     isConnected = true;
+    connectionPromise = null;
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
+    connectionPromise = null;
     console.error("Error connecting to MongoDB:", error);
     throw error;
   }

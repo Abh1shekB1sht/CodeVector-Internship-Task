@@ -13,6 +13,17 @@ app.get("/", (req, res) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("Request blocked before DB connection:", error);
+    res.status(503).json({ message: "Database connection unavailable" });
+  }
+});
+
 app.use("/api/product", productRoute);
 
 dotenv.config();
