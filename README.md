@@ -4,8 +4,7 @@ This is a full-stack product browser app made using **React + Vite** for fronten
 
 ## Live Links
 
-- Frontend: https://code-vector-internship-task-1kz5.vercel.app/
-- Backend: https://code-vector-internship-task-five.vercel.app/
+- LIVE URL: https://product-browser-frontend-xi.vercel.app/
 
 ## Features
 
